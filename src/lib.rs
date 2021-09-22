@@ -205,13 +205,16 @@ impl Type {
     pub const DGRAM: Type = Type(sys::SOCK_DGRAM);
 
     /// Type corresponding to `SOCK_SEQPACKET`.
-    #[cfg(feature = "all")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "all")))]
+    #[cfg(all(feature = "all", not(target_os = "espidf")))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", not(target_os = "espidf")))))]
     pub const SEQPACKET: Type = Type(sys::SOCK_SEQPACKET);
 
     /// Type corresponding to `SOCK_RAW`.
-    #[cfg(all(feature = "all", not(target_os = "redox")))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", not(target_os = "redox")))))]
+    #[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf")))))
+    )]
     pub const RAW: Type = Type(sys::SOCK_RAW);
 }
 
@@ -328,9 +331,14 @@ impl<'a> DerefMut for MaybeUninitSlice<'a> {
 #[derive(Debug, Clone)]
 pub struct TcpKeepalive {
     time: Option<Duration>,
-    #[cfg(not(any(target_os = "redox", target_os = "solaris")))]
+    #[cfg(not(any(target_os = "redox", target_os = "solaris", target_os = "espidf")))]
     interval: Option<Duration>,
-    #[cfg(not(any(target_os = "redox", target_os = "solaris", target_os = "windows")))]
+    #[cfg(not(any(
+        target_os = "redox",
+        target_os = "solaris",
+        target_os = "windows",
+        target_os = "espidf"
+    )))]
     retries: Option<u32>,
 }
 
@@ -339,9 +347,14 @@ impl TcpKeepalive {
     pub const fn new() -> TcpKeepalive {
         TcpKeepalive {
             time: None,
-            #[cfg(not(any(target_os = "redox", target_os = "solaris")))]
+            #[cfg(not(any(target_os = "redox", target_os = "solaris", target_os = "espidf")))]
             interval: None,
-            #[cfg(not(any(target_os = "redox", target_os = "solaris", target_os = "windows")))]
+            #[cfg(not(any(
+                target_os = "redox",
+                target_os = "solaris",
+                target_os = "windows",
+                target_os = "espidf"
+            )))]
             retries: None,
         }
     }
