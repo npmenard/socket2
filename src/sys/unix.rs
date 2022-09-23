@@ -103,13 +103,31 @@ pub(crate) use libc::IP_TOS;
 pub(crate) use libc::SO_LINGER;
 #[cfg(target_vendor = "apple")]
 pub(crate) use libc::SO_LINGER_SEC as SO_LINGER;
+#[cfg(target_os = "espidf")]
 pub(crate) use libc::{
     ip_mreq as IpMreq, ipv6_mreq as Ipv6Mreq, linger, IPPROTO_IP, IPPROTO_IPV6,
     IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY,
     IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP, IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL,
     IP_TTL, MSG_OOB, MSG_PEEK, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_RCVBUF,
-    SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, SO_TYPE, TCP_NODELAY,
+    SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, SO_TYPE,
 };
+#[cfg(not(target_os = "espidf"))]
+pub(crate) use libc::{
+    ip_mreq as IpMreq, ipv6_mreq as Ipv6Mreq, linger, IPPROTO_IP, IPPROTO_IPV6,
+    IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY,
+    IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP, IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL,
+    IP_TTL, MSG_OOB, MSG_PEEK, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_RCVBUF,
+    SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, SO_TYPE, TCP_KEEPCNT, TCP_KEEPINTVL,
+    TCP_NODELAY,
+};
+#[cfg(target_os = "espidf")]
+pub(crate) const TCP_NODELAY: libc::c_int = 1;
+#[cfg(target_os = "espidf")]
+pub(crate) const KEEPALIVE_TIME: libc::c_int = 3;
+#[cfg(target_os = "espidf")]
+pub(crate) const TCP_KEEPINTVL: libc::c_int = 4;
+#[cfg(target_os = "espidf")]
+pub(crate) const TCP_KEEPCNT: libc::c_int = 5;
 #[cfg(not(any(
     target_os = "haiku",
     target_os = "netbsd",
@@ -164,7 +182,12 @@ pub(crate) type Bool = c_int;
 
 #[cfg(target_vendor = "apple")]
 use libc::TCP_KEEPALIVE as KEEPALIVE_TIME;
-#[cfg(not(any(target_vendor = "apple", target_os = "haiku", target_os = "openbsd")))]
+#[cfg(not(any(
+    target_vendor = "apple",
+    target_os = "haiku",
+    target_os = "openbsd",
+    target_os = "espidf"
+)))]
 use libc::TCP_KEEPIDLE as KEEPALIVE_TIME;
 
 /// Helper macro to execute a system call that returns an `io::Result`.
@@ -930,16 +953,17 @@ pub(crate) fn set_tcp_keepalive(fd: Socket, keepalive: &TcpKeepalive) -> io::Res
         target_os = "illumos",
         target_os = "linux",
         target_os = "netbsd",
+        target_os = "espidf",
         target_vendor = "apple",
     ))]
     {
         if let Some(interval) = keepalive.interval {
             let secs = into_secs(interval);
-            unsafe { setsockopt(fd, libc::IPPROTO_TCP, libc::TCP_KEEPINTVL, secs)? }
+            unsafe { setsockopt(fd, libc::IPPROTO_TCP, TCP_KEEPINTVL, secs)? }
         }
 
         if let Some(retries) = keepalive.retries {
-            unsafe { setsockopt(fd, libc::IPPROTO_TCP, libc::TCP_KEEPCNT, retries as c_int)? }
+            unsafe { setsockopt(fd, libc::IPPROTO_TCP, TCP_KEEPCNT, retries as c_int)? }
         }
     }
 

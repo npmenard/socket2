@@ -1824,6 +1824,18 @@ impl Socket {
             )
         }
     }
+    /// Set precedence
+    #[cfg(target_os = "espidf")]
+    pub fn set_precedence(&self, precedence: i32) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                sys::IPPROTO_TCP,
+                sys::IP_TOS,
+                precedence as c_int,
+            )
+        }
+    }
 }
 
 impl Read for Socket {
