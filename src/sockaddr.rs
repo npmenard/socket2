@@ -2,13 +2,12 @@ use std::mem::{self, size_of, MaybeUninit};
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::{fmt, io};
 
-#[cfg(windows)]
-use windows_sys::Win32::Networking::WinSock::SOCKADDR_IN6_0;
-
 use crate::sys::{
     sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_storage, socklen_t, AF_INET,
     AF_INET6,
 };
+#[cfg(windows)]
+use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH_u;
 
 /// The address of a socket.
 ///
@@ -185,7 +184,7 @@ impl SockAddr {
                 addr.sin6_scope_id,
                 #[cfg(windows)]
                 unsafe {
-                    addr.Anonymous.sin6_scope_id
+                    *addr.u.sin6_scope_id()
                 },
             )))
         } else {
@@ -236,7 +235,8 @@ impl From<SocketAddrV4> for SockAddr {
                 target_os = "macos",
                 target_os = "netbsd",
                 target_os = "openbsd",
-                target_os = "espidf"
+                target_os = "nto",
+                target_os = "espidf",
             ))]
             sin_len: 0,
         };
@@ -252,6 +252,13 @@ impl From<SocketAddrV4> for SockAddr {
 
 impl From<SocketAddrV6> for SockAddr {
     fn from(addr: SocketAddrV6) -> SockAddr {
+        #[cfg(windows)]
+        let u = unsafe {
+            let mut u = mem::zeroed::<SOCKADDR_IN6_LH_u>();
+            *u.sin6_scope_id_mut() = addr.scope_id();
+            u
+        };
+
         let sockaddr_in6 = sockaddr_in6 {
             sin6_family: AF_INET6 as sa_family_t,
             sin6_port: addr.port().to_be(),
@@ -260,9 +267,7 @@ impl From<SocketAddrV6> for SockAddr {
             #[cfg(unix)]
             sin6_scope_id: addr.scope_id(),
             #[cfg(windows)]
-            Anonymous: SOCKADDR_IN6_0 {
-                sin6_scope_id: addr.scope_id(),
-            },
+            u,
             #[cfg(any(
                 target_os = "dragonfly",
                 target_os = "freebsd",
@@ -271,7 +276,8 @@ impl From<SocketAddrV6> for SockAddr {
                 target_os = "macos",
                 target_os = "netbsd",
                 target_os = "openbsd",
-                target_os = "espidf"
+                target_os = "nto",
+                target_os = "espidf",
             ))]
             sin6_len: 0,
             #[cfg(any(target_os = "solaris", target_os = "illumos"))]
@@ -300,6 +306,7 @@ impl fmt::Debug for SockAddr {
             target_os = "netbsd",
             target_os = "openbsd",
             target_os = "vxworks",
+            target_os = "nto",
         ))]
         f.field("ss_len", &self.storage.ss_len);
         f.field("ss_family", &self.storage.ss_family)

@@ -1,4 +1,35 @@
-# 0.4.5
+# 0.4.9
+
+* Fixed compilation on Windows
+  (https://github.com/rust-lang/socket2/pull/409).
+
+# 0.4.8 (yanked)
+
+This release was broken for Windows.
+
+* Add `Socket::peek_sender` (backport)
+  (https://github.com/rust-lang/socket2/pull/404).
+
+# 0.4.7
+
+* Fixes compilation on OpenBSD
+  (https://github.com/rust-lang/socket2/pull/344).
+* Fixes compilation on DragonFlyBSD
+  (https://github.com/rust-lang/socket2/pull/342).
+
+# 0.4.6
+
+* Reverted back to the `winapi` dependency as switch to `windows-sys` was a
+  breaking change (https://github.com/rust-lang/socket2/pull/340).
+  Note that we'll will switch to `windows-sys` in v0.5 .
+* Disable RECVTOS on OpenBSD
+  (https://github.com/rust-lang/socket2/pull/307).
+* Derive Clone for SockAddr
+  (https://github.com/rust-lang/socket2/pull/311).
+* Fix cfg attributes for Fuchsia
+  (https://github.com/rust-lang/socket2/pull/314).
+
+# 0.4.5 (yanked)
 
 ## Changed
 

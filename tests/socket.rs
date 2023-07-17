@@ -40,7 +40,11 @@ use std::time::Duration;
 use std::{env, fs};
 
 #[cfg(windows)]
-use windows_sys::Win32::Foundation::{GetHandleInformation, HANDLE_FLAG_INHERIT};
+use winapi::shared::minwindef::DWORD;
+#[cfg(windows)]
+use winapi::um::handleapi::GetHandleInformation;
+#[cfg(windows)]
+use winapi::um::winbase::HANDLE_FLAG_INHERIT;
 
 #[cfg(not(target_os = "redox"))]
 use socket2::MaybeUninitSlice;
@@ -316,7 +320,7 @@ pub fn assert_flag_no_inherit<S>(socket: &S, want: bool)
 where
     S: AsRawSocket,
 {
-    let mut flags = 0;
+    let mut flags: DWORD = 0;
     if unsafe { GetHandleInformation(socket.as_raw_socket() as _, &mut flags) } == 0 {
         let err = io::Error::last_os_error();
         panic!("unexpected error: {}", err);
@@ -506,6 +510,21 @@ fn out_of_band() {
     let n = receiver.recv(&mut buf).unwrap();
     assert_eq!(n, DATA.len());
     assert_eq!(unsafe { assume_init(&buf[..n]) }, DATA);
+}
+
+#[test]
+#[cfg(not(target_os = "redox"))] // cfg of `udp_pair_unconnected()`
+fn udp_peek_sender() {
+    let (socket_a, socket_b) = udp_pair_unconnected();
+
+    let socket_a_addr = socket_a.local_addr().unwrap();
+    let socket_b_addr = socket_b.local_addr().unwrap();
+
+    socket_b.send_to(b"Hello, world!", &socket_a_addr).unwrap();
+
+    let sender_addr = socket_a.peek_sender().unwrap();
+
+    assert_eq!(sender_addr.as_socket(), socket_b_addr.as_socket());
 }
 
 #[test]
@@ -1170,9 +1189,11 @@ test!(IPv4 ttl, set_ttl(40));
 test!(IPv4 tos, set_tos(96));
 
 #[cfg(not(any(
+    target_os = "dragonfly",
     target_os = "fuchsia",
     target_os = "illumos",
     target_os = "netbsd",
+    target_os = "openbsd",
     target_os = "redox",
     target_os = "solaris",
     target_os = "windows",
@@ -1183,7 +1204,12 @@ test!(IPv4 recv_tos, set_recv_tos(true));
 test!(IPv4 broadcast, set_broadcast(true));
 
 test!(IPv6 unicast_hops_v6, set_unicast_hops_v6(20));
-#[cfg(not(any(windows, any(target_os = "dragonfly", target_os = "freebsd"))))]
+#[cfg(not(any(
+    windows,
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "openbsd"
+)))]
 test!(IPv6 only_v6, set_only_v6(true));
 // IPv6 socket are already IPv6 only on FreeBSD and Windows.
 #[cfg(any(windows, any(target_os = "freebsd")))]
@@ -1203,6 +1229,7 @@ test!(
     target_os = "haiku",
     target_os = "illumos",
     target_os = "netbsd",
+    target_os = "openbsd",
     target_os = "redox",
     target_os = "solaris",
 )))]
@@ -1228,8 +1255,10 @@ fn join_leave_multicast_v4_n() {
 
 #[test]
 #[cfg(not(any(
+    target_os = "dragonfly",
     target_os = "haiku",
     target_os = "netbsd",
+    target_os = "openbsd",
     target_os = "redox",
     target_os = "fuchsia",
 )))]

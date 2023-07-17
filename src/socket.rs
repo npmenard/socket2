@@ -11,7 +11,9 @@ use std::io::{self, Read, Write};
 #[cfg(not(target_os = "redox"))]
 use std::io::{IoSlice, IoSliceMut};
 use std::mem::MaybeUninit;
-use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
+#[cfg(not(target_os = "nto"))]
+use std::net::Ipv6Addr;
+use std::net::{self, Ipv4Addr, Shutdown};
 #[cfg(unix)]
 use std::os::unix::io::{FromRawFd, IntoRawFd};
 #[cfg(windows)]
@@ -562,9 +564,34 @@ impl Socket {
     /// `peek_from` makes the same safety guarantees regarding the `buf`fer as
     /// [`recv`].
     ///
+    /// # Note: Datagram Sockets
+    /// For datagram sockets, the behavior of this method when `buf` is smaller than
+    /// the datagram at the head of the receive queue differs between Windows and
+    /// Unix-like platforms (Linux, macOS, BSDs, etc: colloquially termed "*nix").
+    ///
+    /// On *nix platforms, the datagram is truncated to the length of `buf`.
+    ///
+    /// On Windows, an error corresponding to `WSAEMSGSIZE` will be returned.
+    ///
+    /// For consistency between platforms, be sure to provide a sufficiently large buffer to avoid
+    /// truncation; the exact size required depends on the underlying protocol.
+    ///
+    /// If you just want to know the sender of the data, try [`peek_sender`].
+    ///
     /// [`recv`]: Socket::recv
+    /// [`peek_sender`]: Socket::peek_sender
     pub fn peek_from(&self, buf: &mut [MaybeUninit<u8>]) -> io::Result<(usize, SockAddr)> {
         self.recv_from_with_flags(buf, sys::MSG_PEEK)
+    }
+
+    /// Retrieve the sender for the data at the head of the receive queue.
+    ///
+    /// This is equivalent to calling [`peek_from`] with a zero-sized buffer,
+    /// but suppresses the `WSAEMSGSIZE` error on Windows.
+    ///
+    /// [`peek_from`]: Socket::peek_from
+    pub fn peek_sender(&self) -> io::Result<SockAddr> {
+        sys::peek_sender(self.as_raw())
     }
 
     /// Sends data on the socket to a connected peer.
@@ -1019,7 +1046,7 @@ impl Socket {
     #[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))]
     #[cfg_attr(
         docsrs,
-        doc(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))
+        doc(cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf")))))
     )]
     pub fn header_included(&self) -> io::Result<bool> {
         unsafe {
@@ -1042,7 +1069,7 @@ impl Socket {
     #[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))]
     #[cfg_attr(
         docsrs,
-        doc(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))
+        doc(cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf")))))
     )]
     pub fn set_header_included(&self, included: bool) -> io::Result<()> {
         unsafe {
@@ -1145,6 +1172,7 @@ impl Socket {
         target_os = "openbsd",
         target_os = "redox",
         target_os = "solaris",
+        target_os = "nto",
         target_os = "espidf",
     )))]
     pub fn join_multicast_v4_n(
@@ -1175,6 +1203,7 @@ impl Socket {
         target_os = "openbsd",
         target_os = "redox",
         target_os = "solaris",
+        target_os = "nto",
         target_os = "espidf",
     )))]
     pub fn leave_multicast_v4_n(
@@ -1201,10 +1230,13 @@ impl Socket {
     /// multicast group. If it's [`Ipv4Addr::UNSPECIFIED`] (`INADDR_ANY`) then
     /// an appropriate interface is chosen by the system.
     #[cfg(not(any(
+        target_os = "dragonfly",
         target_os = "haiku",
         target_os = "netbsd",
+        target_os = "openbsd",
         target_os = "redox",
         target_os = "fuchsia",
+        target_os = "nto",
         target_os = "espidf",
     )))]
     pub fn join_ssm_v4(
@@ -1234,10 +1266,13 @@ impl Socket {
     ///
     /// [`join_ssm_v4`]: Socket::join_ssm_v4
     #[cfg(not(any(
+        target_os = "dragonfly",
         target_os = "haiku",
         target_os = "netbsd",
+        target_os = "openbsd",
         target_os = "redox",
         target_os = "fuchsia",
+        target_os = "nto",
         target_os = "espidf",
     )))]
     pub fn leave_ssm_v4(
@@ -1406,12 +1441,15 @@ impl Socket {
     /// incoming packets. It contains a byte which specifies the
     /// Type of Service/Precedence field of the packet header.
     #[cfg(not(any(
+        target_os = "dragonfly",
         target_os = "fuchsia",
         target_os = "illumos",
         target_os = "netbsd",
         target_os = "openbsd",
         target_os = "redox",
         target_os = "solaris",
+        target_os = "windows",
+        target_os = "nto",
         target_os = "espidf",
     )))]
     pub fn set_recv_tos(&self, recv_tos: bool) -> io::Result<()> {
@@ -1433,12 +1471,15 @@ impl Socket {
     ///
     /// [`set_recv_tos`]: Socket::set_recv_tos
     #[cfg(not(any(
+        target_os = "dragonfly",
         target_os = "fuchsia",
         target_os = "illumos",
         target_os = "netbsd",
         target_os = "openbsd",
         target_os = "redox",
         target_os = "solaris",
+        target_os = "windows",
+        target_os = "nto",
         target_os = "espidf",
     )))]
     pub fn recv_tos(&self) -> io::Result<bool> {
@@ -1462,6 +1503,7 @@ impl Socket {
     /// This function specifies a new multicast group for this socket to join.
     /// The address must be a valid multicast address, and `interface` is the
     /// index of the interface to join/leave (or 0 to indicate any interface).
+    #[cfg(not(target_os = "nto"))]
     pub fn join_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
         let mreq = sys::Ipv6Mreq {
             ipv6mr_multiaddr: sys::to_in6_addr(multiaddr),
@@ -1485,6 +1527,7 @@ impl Socket {
     /// For more information about this option, see [`join_multicast_v6`].
     ///
     /// [`join_multicast_v6`]: Socket::join_multicast_v6
+    #[cfg(not(target_os = "nto"))]
     pub fn leave_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
         let mreq = sys::Ipv6Mreq {
             ipv6mr_multiaddr: sys::to_in6_addr(multiaddr),

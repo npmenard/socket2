@@ -76,19 +76,23 @@ pub(crate) use libc::{
 pub(crate) use libc::MSG_TRUNC;
 #[cfg(not(target_os = "redox"))]
 pub(crate) use libc::SO_OOBINLINE;
-#[cfg(target_os = "espidf")]
-pub(crate) const MSG_TRUNC: libc::c_int = 4; // TODO: Expose in libc for ESP-IDF/LwIP
-                                             // Used in `Socket`.
-                                             // Used in `Socket`.
+//#[cfg(target_os = "espidf")]
+//pub(crate) const MSG_TRUNC: libc::c_int = 4;
+// Used in `Socket`.
+#[cfg(not(target_os = "nto"))]
+pub(crate) use libc::ipv6_mreq as Ipv6Mreq;
 #[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))]
 pub(crate) use libc::IP_HDRINCL;
 #[cfg(not(any(
+    target_os = "dragonfly",
     target_os = "fuchsia",
     target_os = "illumos",
     target_os = "netbsd",
     target_os = "openbsd",
     target_os = "redox",
     target_os = "solaris",
+    target_os = "haiku",
+    target_os = "nto",
     target_os = "espidf",
 )))]
 pub(crate) use libc::IP_RECVTOS;
@@ -105,19 +109,19 @@ pub(crate) use libc::SO_LINGER;
 pub(crate) use libc::SO_LINGER_SEC as SO_LINGER;
 #[cfg(target_os = "espidf")]
 pub(crate) use libc::{
-    ip_mreq as IpMreq, ipv6_mreq as Ipv6Mreq, linger, IPPROTO_IP, IPPROTO_IPV6,
-    IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY,
-    IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP, IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL,
-    IP_TTL, MSG_OOB, MSG_PEEK, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_RCVBUF,
-    SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, SO_TYPE,
+    ip_mreq as IpMreq, linger, IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF,
+    IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP,
+    IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL, IP_TTL, MSG_OOB, MSG_PEEK, SOL_SOCKET,
+    SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF,
+    SO_SNDTIMEO, SO_TYPE,
 };
 #[cfg(not(target_os = "espidf"))]
 pub(crate) use libc::{
-    ip_mreq as IpMreq, ipv6_mreq as Ipv6Mreq, linger, IPPROTO_IP, IPPROTO_IPV6,
-    IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY,
-    IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP, IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL,
-    IP_TTL, MSG_OOB, MSG_PEEK, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_RCVBUF,
-    SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, SO_TYPE, TCP_NODELAY,
+    ip_mreq as IpMreq, linger, IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF,
+    IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP,
+    IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL, IP_TTL, MSG_OOB, MSG_PEEK, SOL_SOCKET,
+    SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF,
+    SO_SNDTIMEO, SO_TYPE, TCP_NODELAY,
 };
 #[cfg(target_os = "espidf")]
 pub(crate) const TCP_NODELAY: libc::c_int = 1;
@@ -128,10 +132,13 @@ pub(crate) const TCP_KEEPINTVL: libc::c_int = 4;
 #[cfg(target_os = "espidf")]
 pub(crate) const TCP_KEEPCNT: libc::c_int = 5;
 #[cfg(not(any(
+    target_os = "dragonfly",
     target_os = "haiku",
     target_os = "netbsd",
+    target_os = "openbsd",
     target_os = "redox",
     target_os = "fuchsia",
+    target_os = "nto",
     target_os = "espidf",
 )))]
 pub(crate) use libc::{
@@ -145,6 +152,7 @@ pub(crate) use libc::{
     target_os = "netbsd",
     target_os = "openbsd",
     target_os = "solaris",
+    target_os = "nto",
     target_vendor = "apple"
 )))]
 pub(crate) use libc::{IPV6_ADD_MEMBERSHIP, IPV6_DROP_MEMBERSHIP};
@@ -179,12 +187,13 @@ pub(crate) use libc::{TCP_KEEPCNT, TCP_KEEPINTVL};
 // See this type in the Windows file.
 pub(crate) type Bool = c_int;
 
-#[cfg(target_vendor = "apple")]
+#[cfg(any(target_vendor = "apple", target_os = "nto"))]
 use libc::TCP_KEEPALIVE as KEEPALIVE_TIME;
 #[cfg(not(any(
     target_vendor = "apple",
     target_os = "haiku",
     target_os = "openbsd",
+    target_os = "nto",
     target_os = "espidf"
 )))]
 use libc::TCP_KEEPIDLE as KEEPALIVE_TIME;
@@ -204,7 +213,7 @@ macro_rules! syscall {
 
 /// Maximum size of a buffer passed to system call like `recv` and `send`.
 #[cfg(not(target_vendor = "apple"))]
-const MAX_BUF_LEN: usize = ssize_t::MAX as usize;
+const MAX_BUF_LEN: usize = <ssize_t>::max_value() as usize;
 
 // The maximum read limit on most posix-like systems is `SSIZE_MAX`, with the
 // man page quoting that if the count of bytes to read is greater than
@@ -215,7 +224,7 @@ const MAX_BUF_LEN: usize = ssize_t::MAX as usize;
 // than or equal to INT_MAX. To handle both of these the read size is capped on
 // both platforms.
 #[cfg(target_vendor = "apple")]
-const MAX_BUF_LEN: usize = c_int::MAX as usize - 1;
+const MAX_BUF_LEN: usize = <c_int>::max_value() as usize - 1;
 
 #[cfg(any(
     all(
@@ -245,8 +254,10 @@ type IovLen = usize;
     target_os = "netbsd",
     target_os = "openbsd",
     target_os = "solaris",
+    target_os = "nto",
     target_os = "espidf",
     target_vendor = "apple",
+    target_os = "espidf",
 ))]
 type IovLen = c_int;
 
@@ -433,6 +444,7 @@ impl RecvFlags {
     /// a record is terminated by sending a message with the end-of-record flag set.
     ///
     /// On Unix this corresponds to the MSG_EOR flag.
+    #[cfg(not(target_os = "espidf"))]
     pub const fn is_end_of_record(self) -> bool {
         // TODO: Expose this constant in libc for the ESP-IDF/LwIP framework
         #[cfg(target_os = "espidf")]
@@ -458,11 +470,13 @@ impl RecvFlags {
 #[cfg(not(target_os = "redox"))]
 impl std::fmt::Debug for RecvFlags {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("RecvFlags")
-            .field("is_end_of_record", &self.is_end_of_record())
-            .field("is_out_of_band", &self.is_out_of_band())
-            .field("is_truncated", &self.is_truncated())
-            .finish()
+        let mut s = f.debug_struct("RecvFlags");
+        #[cfg(not(target_os = "espidf"))]
+        s.field("is_end_of_record", &self.is_end_of_record());
+        s.field("is_out_of_band", &self.is_out_of_band());
+        #[cfg(not(target_os = "espidf"))]
+        s.field("is_truncated", &self.is_truncated());
+        s.finish()
     }
 }
 
@@ -661,7 +675,7 @@ pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Res
         }
 
         let timeout = (timeout - elapsed).as_millis();
-        let timeout = clamp(timeout, 1, c_int::MAX as u128) as c_int;
+        let timeout = clamp(timeout, 1, c_int::max_value() as u128) as c_int;
 
         match syscall!(poll(&mut pollfd, 1, timeout)) {
             Ok(0) => return Err(io::ErrorKind::TimedOut.into()),
@@ -773,6 +787,15 @@ pub(crate) fn recv_from(
             .map(|n| n as usize)
         })
     }
+}
+
+pub(crate) fn peek_sender(fd: Socket) -> io::Result<SockAddr> {
+    // Unix-like platforms simply truncate the returned data, so this implementation is trivial.
+    // However, for Windows this requires suppressing the `WSAEMSGSIZE` error,
+    // so that requires a different approach.
+    // NOTE: macOS does not populate `sockaddr` if you pass a zero-sized buffer.
+    let (_, sender) = recv_from(fd, &mut [MaybeUninit::uninit(); 8], MSG_PEEK)?;
+    Ok(sender)
 }
 
 #[cfg(not(target_os = "redox"))]
@@ -917,7 +940,7 @@ fn into_timeval(duration: Option<Duration>) -> libc::timeval {
         // https://github.com/rust-lang/libc/issues/1848
         #[cfg_attr(target_env = "musl", allow(deprecated))]
         Some(duration) => libc::timeval {
-            tv_sec: min(duration.as_secs(), libc::time_t::MAX as u64) as libc::time_t,
+            tv_sec: min(duration.as_secs(), libc::time_t::max_value() as u64) as libc::time_t,
             tv_usec: duration.subsec_micros() as libc::suseconds_t,
         },
         None => libc::timeval {
@@ -938,7 +961,7 @@ pub(crate) fn keepalive_time(fd: Socket) -> io::Result<Duration> {
 
 #[allow(unused_variables)]
 pub(crate) fn set_tcp_keepalive(fd: Socket, keepalive: &TcpKeepalive) -> io::Result<()> {
-    #[cfg(not(any(target_os = "haiku", target_os = "openbsd")))]
+    #[cfg(not(any(target_os = "haiku", target_os = "openbsd", target_os = "nto")))]
     if let Some(time) = keepalive.time {
         let secs = into_secs(time);
         unsafe { setsockopt(fd, libc::IPPROTO_TCP, KEEPALIVE_TIME, secs)? }
@@ -966,12 +989,18 @@ pub(crate) fn set_tcp_keepalive(fd: Socket, keepalive: &TcpKeepalive) -> io::Res
         }
     }
 
+    #[cfg(target_os = "nto")]
+    if let Some(time) = keepalive.time {
+        let secs = into_timeval(Some(time));
+        unsafe { setsockopt(fd, libc::IPPROTO_TCP, KEEPALIVE_TIME, secs)? }
+    }
+
     Ok(())
 }
 
-#[cfg(not(any(target_os = "haiku", target_os = "openbsd")))]
+#[cfg(not(any(target_os = "haiku", target_os = "openbsd", target_os = "nto")))]
 fn into_secs(duration: Duration) -> c_int {
-    min(duration.as_secs(), c_int::MAX as u64) as c_int
+    min(duration.as_secs(), c_int::max_value() as u64) as c_int
 }
 
 /// Add `flag` to the current set flags of `F_GETFD`.
@@ -1064,6 +1093,7 @@ pub(crate) fn from_in6_addr(addr: in6_addr) -> Ipv6Addr {
     target_os = "openbsd",
     target_os = "redox",
     target_os = "solaris",
+    target_os = "nto",
     target_os = "espidf",
 )))]
 pub(crate) fn to_mreqn(
